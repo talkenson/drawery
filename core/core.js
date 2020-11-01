@@ -36,6 +36,12 @@ const utilsFixedUpdate = () => {
   }
 };
 
+const handleHotkey = (key) => {
+  if (_SETTINGS.general.hotkeys.isActive && _SETTINGS.general.hotkeys.linker[key]) {
+    _SETTINGS.general.hotkeys.linker[key]();
+  }
+};
+
 const drawLineRaw = (point1, point2, color = COLORS.BLACK, thickness = 1) => {
   stroke(`rgba(${color.join(',')},0.9)`);
   strokeWeight(thickness);
@@ -90,10 +96,18 @@ const drawLine = (point1, point2, color = STATE.currentColor, thickness = 1, typ
 };
 
 class LDM {
+  constructor() {
+    this.__reset();
+  }
   firstpoint = true;
-  coord = [[0, 0], [0, 0]];
-  colors = [null, null];
+  coord;
+  colors;
   mark = COLORS.WHAY;
+
+  __reset = () => {
+    this.colors = [null, null];
+    this.coord = [[0, 0], [0, 0]];
+  };
 
   setCoord = (i, x, y) => {
     if (i === 0 && this.colors[i] !== null && !arraysEqual(this.colors[i], this.mark)) {
@@ -155,8 +169,21 @@ const startFillFrom = async (x, y, isColored = false, startColor = COLORS.WHITE,
   STATE.processes.terminatedByEnd++;
 };
 
-const changeColor = () => {
-  _SETTINGS.general.color.current = (_SETTINGS.general.color.current + 1) % _SETTINGS.general.color.palette.length;
+const changeColor = (type) => {
+  switch (type) {
+    case LEFT:
+      _SETTINGS.general.color.current =
+        (_SETTINGS.general.color.current + 1) % _SETTINGS.general.color.palette.length;
+      break;
+    case RIGHT:
+      _SETTINGS.general.color.current =
+        (_SETTINGS.general.color.current + _SETTINGS.general.color.palette.length - 1)
+        % _SETTINGS.general.color.palette.length;
+      break;
+    case MIDDLE:
+      _SETTINGS.general.color.current = 0;
+      break;
+  }
   STATE.currentColor = _SETTINGS.general.color.palette[_SETTINGS.general.color.current];
 };
 
@@ -190,18 +217,19 @@ const ToolsRenderer = {
 };
 
 const ToolActions = {
-  'Pixel': () => {STATE.activeTool = 'Pixel'},
-  'Line': () => {STATE.activeTool = 'Line'},
-  'Fill': () => {STATE.activeTool = 'Fill'},
-  'Colorizer': () => {changeColor()},
-  'Clear': () => {
+  'Pixel': (type) => {STATE.activeTool = 'Pixel'},
+  'Line': (type) => {STATE.activeTool = 'Line'},
+  'Fill': (type) => {STATE.activeTool = 'Fill'},
+  'Colorizer': (type) => {changeColor(type)},
+  'Clear': (type) => {
     Object.keys(_SETTINGS.setup.modules).forEach(key => {
       _SETTINGS.setup.modules[key].model ?
         _SETTINGS.setup.modules[key].model.render()
-        : (_SETTINGS.setup.modules[key].render ? _SETTINGS.setup.modules[key].render() : console.log('drawGrid isn\'t inited before clearing'))
-    })
+        : (_SETTINGS.setup.modules[key].render ? _SETTINGS.setup.modules[key].render() : console.log(`${key} isn\'t inited before clearing`))
+    });
+    document.dispatchEvent(new Event('clearEvent'));
   },
-  'Export': () => {
+  'Export': (type) => {
     saveCanvas(createCanvasName(), 'jpg')
   }
 };
@@ -234,13 +262,10 @@ class Toolbar {
   };
   _buttons = [];
 
-  pressButton = () => {
+  pressButton = (mbtn = LEFT) => {
     this._buttons.forEach(btn => {
       if (testXY(btn.from.x, btn.to.x, btn.from.y, btn.to.y)) {
-        if (!['Clear', 'Colorizer', 'Export'].includes(btn.name)) {
-          STATE.activeTool = btn.name;
-        }
-        btn.callback();
+        btn.callback(mbtn);
         return;
       }
     })

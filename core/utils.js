@@ -22,14 +22,6 @@ const CAr2Pix = (coords = [0, 0]) => {
   return [Math.round((coords[0] - CENTER_W) / PIXEL_SIZE - 0.5), -Math.round((coords[1] - CENTER_H) / PIXEL_SIZE + 0.5)];
 };
 
-function mousePressed() {
-  loop();
-}
-
-function mouseReleased() {
-  noLoop();
-}
-
 function arraysEqual(a, b) {
   return Array.isArray(a) &&
     Array.isArray(b) &&
@@ -38,7 +30,13 @@ function arraysEqual(a, b) {
 }
 
 function createCanvasName() {
-  return 'myCanvas'
+  let currentDate = new Date();
+  return "dycanvas" + currentDate.getDate()
+    + (currentDate.getMonth() + 1)
+    + currentDate.getFullYear() + "_"
+    + currentDate.getHours()
+    + currentDate.getMinutes()
+    + currentDate.getSeconds()
 }
 
 const isDrawable = (coords) => {

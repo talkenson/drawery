@@ -12,9 +12,18 @@ const COLORS = {
   BLACK: [0, 0, 0],
   WHITE: [255, 255, 255],
   WHAY: [190, 190, 190],
-  RED: [255, 163, 163],
-  GREEN: [138, 255, 154],
+  RED: [255, 110, 110],
   YELLOW: [255, 246, 138],
+
+  GREEN: [138, 255, 154],
+  BLUE: [62, 78, 235],
+  CYAN: [99, 244, 246],
+  MAGENTA: [240, 0, 240],
+  DARKMAGENTA: [139, 0, 139],
+  PINK: [255, 154, 186],
+  DARKGREEN: [3, 88, 30],
+  ORANGE: [255, 138, 28],
+
   GRAY: [193, 193, 193],
   DARKGRAY: [140, 140, 140],
   LIGHTBLACK: [40, 40, 40],
@@ -85,8 +94,25 @@ let _SETTINGS = {
     },
     color: {
       current: 0,
-      palette: [COLORS.RED, COLORS.GREEN, COLORS.YELLOW, COLORS.BLACK, COLORS.WHITE],
-    }
+      palette: [
+        COLORS.RED,
+        COLORS.PINK,
+        COLORS.ORANGE,
+        COLORS.YELLOW,
+        COLORS.GREEN,
+        COLORS.DARKGREEN,
+        COLORS.BLUE,
+        COLORS.CYAN,
+        COLORS.MAGENTA,
+        COLORS.DARKMAGENTA,
+        COLORS.BLACK,
+        COLORS.WHITE
+      ],
+    },
+    hotkeys: {
+      isActive: false,
+      linker: {},
+    },
   },
   cursors:
     [
@@ -126,5 +152,18 @@ let _SETTINGS = {
     }
   }
 };
+
+class SettingsManager {
+  enableHotkeys     = () => _SETTINGS.general.hotkeys.isActive = true;
+  disableHotkeys    = () => _SETTINGS.general.hotkeys.isActive = false;
+  setHotkeys = (object) => {
+    if (_SETTINGS.general.hotkeys.isActive)
+      throw new Error('For fault tolerance purposes, changing hot keys while they are enabled is prohibited.');
+    _SETTINGS.general.hotkeys.linker = object;
+  };
+}
+
+const _SettingsManager = new SettingsManager();
+
 _SETTINGS.setup.initialState.currentColor = _SETTINGS.general.color.palette[_SETTINGS.general.color.current];
 
