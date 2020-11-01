@@ -23,13 +23,11 @@ function setup() {
   drawGrid();
   draw();
   tbar.render();
-  //noLoop();
-
-
+  setInterval(utilsFixedUpdate, 50);
+  noLoop();
 }
 
 function draw() {
-  utilsFixedUpdate();
   let [x, y] = C2Pix(mouseX, mouseY);
 
   if (mouseIsPressed) {
@@ -40,13 +38,9 @@ function draw() {
           case 'Line':
             if (mouseButton === LEFT) {
               ldm.setCoord(0, x, y);
-              putPixel([x, y], COLORS.GRAY);
-              //console.log('1 point');
             }
             if (mouseButton === RIGHT) {
               ldm.setCoord(1, x, y);
-              //console.log('2 point');
-              putPixel([x, y], COLORS.GRAY);
               ldm.draw();
             }
             break;
