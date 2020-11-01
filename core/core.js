@@ -66,22 +66,22 @@ const _SETTINGS = {
     },
     color: {
       current: 0,
-      palette: [COLORS.RED, COLORS.GREEN, COLORS.YELLOW, COLORS.BLACK],
+      palette: [COLORS.RED, COLORS.GREEN, COLORS.YELLOW, COLORS.BLACK, COLORS.WHITE],
     }
   },
   cursors:
     [
       {
         region: 'activeArea',
-        cursor: 'CROSS',
+        cursor: 'crosshair',
       },
       {
         region: 'toolbar',
-        cursor: 'ARROW',
+        cursor: 'pointer',
       },
       {
-        region: 'undef',
-        cursor: 'HAND',
+        region: 'none',
+        cursor: 'default',
       }
     ],
   setup: {
@@ -142,12 +142,19 @@ const utilsFixedUpdate = () => {
   if (STATE.activeRegion !== rg || STATE.activeRegion === null) {
     STATE.activeRegion = rg;
     console.log('changed to ', rg);
-    cursor(eval((_SETTINGS.cursors.filter(setup => STATE.activeRegion === setup.region) || ['undef'])[0]));
+    _SETTINGS.cursors.forEach(setup => {
+      if (STATE.activeRegion === setup.region) {
+        console.log('cur set', setup.cursor);
+        cursor(setup.cursor);
+        return;
+      }
+    });
+    cursor(_SETTINGS.cursors.filter(cur => cur.region === 'none')[0])
   }
 };
 
 const drawLineRaw = (point1, point2, color = COLORS.BLACK, thickness = 1) => {
-  stroke(color);
+  stroke(`rgba(${color.join(',')},0.9)`);
   strokeWeight(thickness);
   line(point1[0], point1[1], point2[0], point2[1]);
 };
@@ -274,7 +281,7 @@ const isDrawable = (coords) => {
 
 const putPixel = ([cox, coy], color = STATE.currentColor) => {
     fill(color);
-    stroke(COLORS.STROKE, 90);
+    stroke(`rgba(${COLORS.STROKE.join(',')},0.9)`);
     strokeWeight(1);
     square(CENTER_W + cox * PIXEL_SIZE, CENTER_H - (coy + 1) * PIXEL_SIZE, PIXEL_SIZE);
 };
@@ -294,7 +301,14 @@ function arraysEqual(a, b) {
     a.every((val, index) => val === b[index]);
 }
 
-const startFillFrom = async (x, y, isColored = false, startColor = COLORS.WHITE) => {
+const Directions = {
+  Up: 1,
+  Left: 2,
+  Down: 3,
+  Right: 4,
+};
+
+const startFillFrom = async (x, y, isColored = false, startColor = COLORS.WHITE, blockDir = null) => {
   STATE.processes.created++;
   let c = get(x, y).slice(0, 3);
   if (arraysEqual(c, STATE.currentColor) || !arraysEqual(c, startColor)) {
@@ -303,14 +317,14 @@ const startFillFrom = async (x, y, isColored = false, startColor = COLORS.WHITE)
   }
   putPixel(C2Pix(x, y), STATE.currentColor);
 
-  isDrawable(C2Pix(x - PIXEL_SIZE, y)) &&
-  await setTimeout(() => startFillFrom(x - PIXEL_SIZE, y, true, startColor), 50);
-  isDrawable(C2Pix(x, y - PIXEL_SIZE)) &&
-  await setTimeout(() => startFillFrom(x, y - PIXEL_SIZE, true, startColor), 50);
-  isDrawable(C2Pix(x + PIXEL_SIZE, y)) &&
-  await setTimeout(() => startFillFrom(x + PIXEL_SIZE, y, true, startColor), 80);
-  isDrawable(C2Pix(x, y + PIXEL_SIZE)) &&
-  await setTimeout(() => startFillFrom(x, y + PIXEL_SIZE, true, startColor), 80);
+  blockDir !== Directions.Left && isDrawable(C2Pix(x - PIXEL_SIZE, y)) &&
+  await setTimeout(() => startFillFrom(x - PIXEL_SIZE, y, true, startColor, Directions.Right), 30);
+  blockDir !== Directions.Up && isDrawable(C2Pix(x, y - PIXEL_SIZE)) &&
+  await setTimeout(() => startFillFrom(x, y - PIXEL_SIZE, true, startColor, Directions.Down), 30);
+  blockDir !== Directions.Right && isDrawable(C2Pix(x + PIXEL_SIZE, y)) &&
+  await setTimeout(() => startFillFrom(x + PIXEL_SIZE, y, true, startColor, Directions.Left), 30);
+  blockDir !== Directions.Down && isDrawable(C2Pix(x, y + PIXEL_SIZE)) &&
+  await setTimeout(() => startFillFrom(x, y + PIXEL_SIZE, true, startColor, Directions.Up), 30);
   STATE.processes.terminatedByEnd++;
 };
 
