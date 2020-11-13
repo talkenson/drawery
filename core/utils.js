@@ -22,6 +22,14 @@ const CAr2Pix = (coords = [0, 0]) => {
   return [Math.round((coords[0] - CENTER_W) / PIXEL_SIZE - 0.5), -Math.round((coords[1] - CENTER_H) / PIXEL_SIZE + 0.5)];
 };
 
+const Pix2C = (coords = [0, 0]) => {
+  console.log('requested', coords);
+  return [
+    CANVAS_W / 2 + (coords[0] * PIXEL_SIZE),
+    CANVAS_H / 2 - PIXEL_SIZE / 2 - (coords[1] * PIXEL_SIZE)
+  ];
+};
+
 function arraysEqual(a, b) {
   return Array.isArray(a) &&
     Array.isArray(b) &&

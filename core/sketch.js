@@ -18,8 +18,7 @@ let [x, y] = [0, 0];
 function setup() {
   createCanvas(CANVAS_W, CANVAS_H);
   frameRate(FRAME_RATE);
-  //console.log("Setup completed");
-  //console.log(CANVAS_HC, CANVAS_WC);
+  countSizes();
 
   STATE.activeTool = Tools.Line;
   STATE.currentColor = COLORS.RED;
@@ -38,6 +37,14 @@ function setup() {
       STATE.activeTool = Tools.Fill;
       tbar.render();
     },
+    'r': () => {
+      STATE.activeTool = Tools.Rectangle;
+      tbar.render();
+    },
+    'm': () => {
+      STATE.activeTool = Tools.Masking;
+      tbar.render();
+    },
     'c': () => {
       ToolActions[Tools.Colorizer](LEFT);
       tbar.render();
@@ -53,6 +60,10 @@ function setup() {
   draw();
   tbar.render();
   setInterval(utilsFixedUpdate, 50);
+
+  // Debug: painting area size in cells
+  // console.log(_SETTINGS.general.activeArea.cellBorders);
+
   noLoop();
 }
 
@@ -65,6 +76,9 @@ function mouseReleased() {
     case 'activeArea':
       switch (STATE.activeTool) {
         case 'Line':
+        case 'Rectangle':
+        case 'Masking':
+          STATE.lastClickedColor = get(mouseX, mouseY).slice(0, 3);
           if (mouseButton === LEFT) {
             ldm.setCoord(0, x, y);
           }
@@ -97,6 +111,21 @@ function mouseReleased() {
 
 function draw() {
   [x, y] = C2Pix(mouseX, mouseY);
+  console.log(x, y);
+
+  // Funny dot-area in center
+  /*stroke('purple');
+  strokeWeight(4);
+  let i = 0, j = 0;
+  while (i < 30) {
+    j = 0;
+    while (j < 30) {
+      let cr = Pix2C([i - 15, j - 15]);
+      point(cr[0], cr[1]);
+      j++;
+    }
+    i++;
+  }*/
 
   switch (STATE.activeRegion) {
     case 'activeArea':
