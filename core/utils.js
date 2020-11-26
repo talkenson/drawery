@@ -54,3 +54,127 @@ const isDrawable = (coords) => {
     _SETTINGS.general.activeArea.cellBorders.bottom,
     _SETTINGS.general.activeArea.cellBorders.top, coords[0], coords[1]);
 };
+
+
+class PolygonContainer {
+  constructor() {
+    this.__reset();
+
+  }
+  globalPolygonContainer = [];
+  storage = [];
+  isClosed = true;
+  firstPointCoords = [];
+  polygonCrud = new Crud(CrudStore.Polygons);
+
+  __reset = () => {
+    this.storage = [];
+    this.isClosed = true;
+  };
+
+  addSegment = ([xs, ys], [xe, ye]) => {
+    if (this.storage.length === 0) {
+      this.firstPointCoords = [xs, ys];
+      this.isClosed = false;
+      STATE.colorBlocked = true;
+      EventManager.dispatchEvent('color-block', {value: true}, 'polygon-first-point');
+    }
+    this.storage.push({from: [xs, ys], to: [xe, ye]});
+    if (arraysEqual([xe, ye], this.firstPointCoords)) {
+      putPixel([this.firstPointCoords[0], this.firstPointCoords[1]]);
+      this.closeFigure();
+    }
+  };
+
+  closeFigure = () => {
+    console.log('Figure Closed');
+    this.globalPolygonContainer.push({name: 'Polygon', path: this.storage});
+    this.storage = [];
+    this.polygonCrud.update(this.globalPolygonContainer);
+    this.isClosed = true;
+    EventManager.dispatchEvent('color-block', {value: false}, 'polygon-closed');
+
+    document.dispatchEvent(new CustomEvent('LDM', {"detail": {"type": 'reset'}}));
+  }
+}
+
+class LDM {
+  firstpoint = true;
+  coord;
+  colors;
+  mark = COLORS.WHAY;
+  polygonManager = null;
+
+  constructor(polyMan) {
+    this.__reset();
+    if (!polyMan) {
+      throw new Error('No Polygon Manager provided to LineDrawingModule');
+    }
+    this.polygonManager = polyMan;
+
+    document.addEventListener('LDM', this.eventHandler);
+  }
+
+  __reset = () => {
+    this.colors = [null, null];
+    this.coord = [[0, 0], [0, 0]];
+    this.firstpoint = true;
+  };
+
+  eventHandler = (event) => {
+    if (event.detail.type && event.detail.type === 'reset') {
+      this.__reset();
+    }
+  };
+
+  setCoord = (i, x, y) => {
+    if (i === 0 && this.colors[i] !== null && !arraysEqual(this.colors[i], this.mark)) {
+      putPixel([this.coord[i][0], this.coord[i][1]], this.colors[i]);
+    }
+
+    this.colors[i] = get(mouseX, mouseY).slice(0, 3);
+    putPixel([x, y], this.mark);
+    this.coord[i] = [x, y];
+  };
+
+  draw = async () => {
+    this.colors = [STATE.currentColor, STATE.currentColor];
+    switch (STATE.activeTool) {
+      case 'Line':
+        drawLine(this.coord[0], this.coord[1], STATE.currentColor, 0, [AlgoType.BRZ]);
+        break;
+      case 'Rectangle':
+        drawRectangle(this.coord[0], this.coord[1], STATE.currentColor, 0, [AlgoType.BRZ]);
+        break;
+      case 'Polygon':
+        drawLine(this.coord[0], this.coord[1], STATE.currentColor, 0, [AlgoType.BRZ]);
+        this.polygonManager.addSegment(this.coord[0], this.coord[1]);
+        break;
+      case 'Masking':
+        drawRectangle(this.coord[0], this.coord[1], COLORS._MASK, 0, [AlgoType.BRZ]);
+        STATE.maskOptions.lt = [this.coord[0][0], this.coord[0][1]];
+        STATE.maskOptions.rt = [this.coord[1][0], this.coord[0][1]];
+        STATE.maskOptions.lb = [this.coord[1][0], this.coord[1][1]];
+        STATE.maskOptions.rb = [this.coord[0][0], this.coord[1][1]];
+        this.__reset();
+        break;
+    }
+  }
+}
+
+class EventManagerClass {
+  _storage = [];
+  getFormat = (eve, initiator, payload) => {
+    return {eve, initiator, payload}
+  };
+  addListener = (eve, handler, purpose) => {
+    document.addEventListener(eve, handler);
+    this._storage.push({event: eve, handler, purpose})
+  };
+  dispatchEvent = (eve, payload, initiator) =>
+    document.dispatchEvent(new CustomEvent(eve, {"detail": {...payload, initiator}}));
+  findListeners = (eve) => {
+    return this._storage.filter(el => el.event === eve)
+  }
+}
+let EventManager = new EventManagerClass();

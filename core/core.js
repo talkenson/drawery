@@ -10,10 +10,11 @@
 */
 
 let STATE = _SETTINGS.setup.initialState;
-const { pixelCrud, lineCrud, rectCrud, stateCrud } = {
+const { pixelCrud, lineCrud, rectCrud, polyCrud, stateCrud } = {
   pixelCrud: new Crud(CrudStore.Pixels),
   lineCrud: new Crud(CrudStore.Lines),
   rectCrud: new Crud(CrudStore.Rectangles),
+  polyCrud: new Crud(CrudStore.Polygons),
   stateCrud: new Crud(CrudStore.State),
 };
 // Usage sample of new CRUD implementation
@@ -23,6 +24,8 @@ lineCrud.create({point1: [55,2]});
 lineCrud.create({point1: [1,4]});
 console.log(lineCrud.getAll());
 */
+
+const PolyMan = new PolygonContainer();
 
 
 const countSizes = () => {
@@ -129,50 +132,41 @@ const drawRectangle = (point1, point2, color = STATE.currentColor, thickness = 1
   drawLine([point1[0], point2[1]], point1, color, 0, [AlgoType.BRZ]);
 };
 
-class LDM {
-  constructor() {
-    this.__reset();
+
+const testForMask = ([x, y]) => {
+  let mask = [false, false, false, false];
+
+  if (testXY( // top part
+    _SETTINGS.general.activeArea.cellBorders.left,
+    _SETTINGS.general.activeArea.cellBorders.right,
+    STATE.maskOptions.lt[1],
+    _SETTINGS.general.activeArea.cellBorders.top, x, y)) {
+    mask[0] = true
   }
-  firstpoint = true;
-  coord;
-  colors;
-  mark = COLORS.WHAY;
-
-  __reset = () => {
-    this.colors = [null, null];
-    this.coord = [[0, 0], [0, 0]];
-  };
-
-  setCoord = (i, x, y) => {
-    if (i === 0 && this.colors[i] !== null && !arraysEqual(this.colors[i], this.mark)) {
-      putPixel([this.coord[i][0], this.coord[i][1]], this.colors[i]);
-    }
-
-    this.colors[i] = get(mouseX, mouseY).slice(0, 3);
-    putPixel([x, y], this.mark);
-    this.coord[i] = [x, y];
-  };
-
-  draw = () => {
-    this.colors = [STATE.currentColor, STATE.currentColor];
-    switch (STATE.activeTool) {
-      case 'Line':
-        drawLine(this.coord[0], this.coord[1], STATE.currentColor, 0, [AlgoType.BRZ]);
-        break;
-      case 'Rectangle':
-        drawRectangle(this.coord[0], this.coord[1], STATE.currentColor, 0, [AlgoType.BRZ]);
-        break;
-      case 'Masking':
-        drawRectangle(this.coord[0], this.coord[1], COLORS._MASK, 0, [AlgoType.BRZ]);
-        forceFill(Pix2C([this.coord[0][0] - 1, this.coord[0][1] + 1]));
-        forceFill(Pix2C([this.coord[1][0] + 1, this.coord[0][1] + 1]));
-        forceFill(Pix2C([this.coord[1][0] + 1, this.coord[1][1] - 1]));
-        forceFill(Pix2C([this.coord[0][0] - 1, this.coord[1][1] - 1]));
-        this.colors[0] = null;
-        break;
-    }
+  if (testXY( // right part
+    STATE.maskOptions.rt[0],
+    _SETTINGS.general.activeArea.cellBorders.right,
+    _SETTINGS.general.activeArea.cellBorders.bottom,
+    _SETTINGS.general.activeArea.cellBorders.top, x, y)) {
+    mask[1] = true
   }
-}
+  if (testXY( // bottom part
+    _SETTINGS.general.activeArea.cellBorders.left,
+    _SETTINGS.general.activeArea.cellBorders.right,
+    _SETTINGS.general.activeArea.cellBorders.bottom,
+    STATE.maskOptions.rb[1], x, y)) {
+    mask[2] = true
+  }
+  if (testXY( // left part
+    _SETTINGS.general.activeArea.cellBorders.left,
+    STATE.maskOptions.lt[0],
+    _SETTINGS.general.activeArea.cellBorders.bottom,
+    _SETTINGS.general.activeArea.cellBorders.top, x, y)) {
+    mask[3] = true
+  }
+  console.log(['top', 'right', 'bottom', 'left'].map((v, i) => mask[i] ? v : ''));
+  return mask;
+};
 
 const drawGrid = (drawBack = null) => {
   background(COLORS.BG);
@@ -202,14 +196,17 @@ _SETTINGS.setup.modules.grid.render = drawGrid;
 // Initializing
 
 const putPixel = ([cox, coy], color = STATE.currentColor) => {
-    fill(color);
+    if (STATE.maskOptions.isActive && !testForMask([cox, coy]).includes(true) || !STATE.maskOptions.isActive) {
+      fill(color);
+    } else {
+      fill(COLORS.WHAY);
+    }
     STRCOLORS.STROKE && stroke(STRCOLORS.STROKE);
     STRCOLORS.STROKE ? strokeWeight(1) : strokeWeight(0);
     square(CENTER_W + cox * PIXEL_SIZE, CENTER_H - (coy + 1) * PIXEL_SIZE, PIXEL_SIZE);
 };
 
 const startFillFrom = async (x, y, isColored = false, startColor = COLORS.WHITE, blockDir = null) => {
-
   STATE.processes.created++;
   let c = get(x, y).slice(0, 3);
   if (arraysEqual(c, STATE.currentColor) || !arraysEqual(c, startColor)) {
@@ -249,6 +246,7 @@ const forceFill = async ([x, y], ignoreColor = COLORS._MASK, blockDir = null) =>
 };
 
 const changeColor = (type) => {
+  if (STATE.colorBlocked) return;
   switch (type) {
     case LEFT:
       _SETTINGS.general.color.current =
@@ -269,41 +267,51 @@ const changeColor = (type) => {
 const ToolsRenderer = {
   'Pixel': (x, y, sx, sy) => {
     fill(50);
-    text('Pix', x, y, sx, sy);
+    text('Pix', x+1, y, sx-1, sy);
   },
   'Line': (x, y, sx, sy) => {
     fill(50);
-    text('Line', x, y, sx, sy);
+    text('Line', x+1, y, sx-1, sy);
   },
   'Rectangle': (x, y, sx, sy) => {
     fill(50);
-    text('Rect', x, y, sx, sy);
+    text('Rect', x+1, y, sx-1, sy);
+  },
+  'Polygon': (x, y, sx, sy) => {
+    fill(50);
+    text('Poly', x+1, y, sx-1, sy);
   },
   'Fill': (x, y, sx, sy) => {
     fill(50);
-    text('Fill', x, y, sx, sy);
+    text('Fill', x+1, y, sx-1, sy);
   },
   'Colorizer': (x, y, sx, sy) => {
     fill(STATE.currentColor);
     rect(x, y, sx, sy);
     fill(50);
-    text('COL', x, y, sx, sy);
+    text('COL', x+1, y, sx-1, sy);
   },
   'Clear': (x, y, sx, sy) => {
     fill(230, 40, 40);
-    text('ERS', x, y, sx, sy);
+    text('ERS', x+1, y, sx-1, sy);
   },
   'Export': (x, y, sx, sy) => {
     fill(50);
-    text('SAV', x, y, sx, sy);
+    text('SAV', x+1, y, sx-1, sy);
   },
   'Delimiter': (x, y, sx, sy) => {
     stroke(STRCOLORS.STROKEBLACKA);
     line(x, y + sy/2, x + sx, y + sy/2);
   },
   'Masking': (x, y, sx, sy) => {
-    fill(COLORS._MASK);
-    text('MSK', x, y, sx, sy);
+    fill(COLORS.RED);
+    text('MSK', x+1, y, sx-1, sy);
+  },
+  'MaskActivate': (x, y, sx, sy) => {
+    fill(STATE.maskOptions.isActive ? COLORS._MASK : COLORS.WHAY);
+    rect(x, y, sx, sy);
+    fill(50);
+    text(STATE.maskOptions.isActive ? 'ON' : 'OFF', x+1, y, sx-1, sy);
   },
 };
 
@@ -311,6 +319,7 @@ const ToolActions = {
   'Pixel': (type) => {STATE.activeTool = 'Pixel'},
   'Line': (type) => {STATE.activeTool = 'Line'},
   'Rectangle': (type) => {STATE.activeTool = 'Rectangle'},
+  'Polygon': (type) => {STATE.activeTool = 'Polygon'},
   'Fill': (type) => {STATE.activeTool = 'Fill'},
   'Colorizer': (type) => {changeColor(type)},
   'Clear': (type) => {
@@ -325,7 +334,10 @@ const ToolActions = {
     saveCanvas(createCanvasName(), 'jpg')
   },
   'Delimiter': (type) => {},
-  'Masking': (type) => {STATE.activeTool = 'Masking'}
+  'Masking': (type) => {STATE.activeTool = 'Masking'},
+  'MaskActivate': (type) => {
+    STATE.maskOptions.isActive = !STATE.maskOptions.isActive;
+  }
 };
 
 class Toolbar {

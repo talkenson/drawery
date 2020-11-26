@@ -52,12 +52,14 @@ const Tools = {
   Pixel: 'Pixel',
   Line: 'Line',
   Rectangle: 'Rectangle',
+  Polygon: 'Polygon',
   Fill: 'Fill',
   Colorizer: 'Colorizer',
   Clear: 'Clear',
   Export: 'Export',
   Delimiter: 'Delimiter',
   Masking: 'Masking',
+  MaskActivate: 'MaskActivate',
 };
 
 const AlgoType = {
@@ -69,7 +71,7 @@ const AlgoType = {
 let _SETTINGS = {
   toolbar: {
     width: 60,
-    height: 430,
+    height: 600,
     offset: {
       top: 30,
       left: 15,
@@ -94,10 +96,12 @@ let _SETTINGS = {
       Tools.Pixel,
       Tools.Line,
       Tools.Rectangle,
+      Tools.Polygon,
       Tools.Fill,
       Tools.Colorizer,
       Tools.Delimiter,
       Tools.Masking,
+      Tools.MaskActivate,
       Tools.Clear,
       Tools.Delimiter,
       Tools.Export],
@@ -179,6 +183,14 @@ let _SETTINGS = {
       },
       operationCounter: 0,
       lastClickedColor: null,
+      maskOptions: {
+        lt: [],
+        rt: [],
+        lb: [],
+        rb: [],
+        isActive: false,
+      },
+      colorBlocked: false,
     }
   }
 };

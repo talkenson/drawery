@@ -2,6 +2,7 @@ const CrudStore = {
   Pixels: 'store-pixels',
   Lines: 'store-lines',
   Rectangles: 'store-rects',
+  Polygons: 'store-polygons',
   Temporaries: 'store-temporaries',
   State: 'store-state-saver',
 };
@@ -20,18 +21,18 @@ class StorageAssistant {
     return value || expectedValue
   };
 
-  // set(key: string, value: string)
+  // set(key: string, value: string) -> void
   set = (key, value) => {
     if (typeof value !== "string") value = JSON.stringify(value);
     this.op.setItem(key, value);
   };
 
-  // delete(key: string)
+  // delete(key: string) -> void
   delete = (key) => {
     this.op.removeItem(key)
   };
 
-  // _clear()
+  // _clear() -> [Native].clear
   _clear = this.op.clear;
 }
 
@@ -39,22 +40,33 @@ class Crud {
   storeName = null;
   prefix = 'CrudStorage__';
   sa = new StorageAssistant();
+  state = {
+    value: [],
+  };
 
   constructor(store) {
     if (!store) {
-      throw new Error('There\'s no Store provided to Crud initializer! (E: emp_constructor_called)');
+      throw new Error('There\'s no Store provided to Crud constructor! (E: emp_constructor_called)');
     }
     if (typeof store !== 'string') {
-      throw new Error('Incorrect Store name provided to Crud initializer! (E: incorrect_store_name)');
+      throw new Error('Incorrect Store name provided to Crud constructor! (E: incorrect_store_name)');
     }
-    console.log('Crud::Init :', store);
     this.storeName = this.prefix + store;
-    this.__purgeData();
-    document.addEventListener(this.storeName + '_update', this.eventHandler);
+    console.log('Crud::Build :', this.storeName);
+    if (!EventManager.findListeners(this.storeName).length) {
+      console.log('There\'s no Initialization found. Initializing manually...');
+      this.init();
+    }
   }
 
-  state = {
-    value: [],
+
+  init = () => {
+
+    console.log('Crud::Init :', this.storeName);
+
+    EventManager.addListener(this.storeName, this.eventHandler, 'crud-init');
+    //document.addEventListener(this.storeName + '_update', this.eventHandler);
+    this.__purgeData();
   };
 
   create = (iObjectAny) => {
@@ -62,7 +74,14 @@ class Crud {
     console.log(temp);
     temp.value.push(iObjectAny);
     this.sa.set(this.storeName, temp);
-    document.dispatchEvent(new CustomEvent(this.storeName + '_update', {"detail": {"type": 'add'}}));
+    EventManager.dispatchEvent(this.storeName, {"type": 'add'}, 'crud-create');
+    //document.dispatchEvent(new CustomEvent(this.storeName + '_update', {"detail": {"type": 'add'}}));
+  };
+
+  update = (iGeneralObjectAny) => {
+    this.sa.set(this.storeName, iGeneralObjectAny);
+    EventManager.dispatchEvent(this.storeName, {"type": 'update'}, 'crud-update');
+    //document.dispatchEvent(new CustomEvent(this.storeName + '_update', {"detail": {"type": 'update'}}));
   };
 
   getAll = () => {

@@ -10,8 +10,13 @@ document.addEventListener("keydown", event => {
   handleHotkey(event.key);
   // do something
 });
+document.addEventListener("color-block", event => {
+  console.log(event);
+  STATE.colorBlocked = event.detail.value;
+});
 
-const ldm = new LDM();
+
+const ldm = new LDM(PolyMan);
 const tbar = new Toolbar();
 let [x, y] = [0, 0];
 
@@ -78,13 +83,31 @@ function mouseReleased() {
         case 'Line':
         case 'Rectangle':
         case 'Masking':
-          STATE.lastClickedColor = get(mouseX, mouseY).slice(0, 3);
           if (mouseButton === LEFT) {
             ldm.setCoord(0, x, y);
           }
           if (mouseButton === RIGHT) {
             ldm.setCoord(1, x, y);
             ldm.draw();
+          }
+          break;
+        case 'Polygon':
+          if (mouseButton === LEFT) {
+            ldm.setCoord(ldm.firstpoint ? 0 : 1, x, y);
+            if (!ldm.firstpoint) {
+              ldm.draw().then(() => ldm.setCoord(0, x, y));
+            } else {
+              ldm.firstpoint = false;
+            }
+            /*
+            if (figure_closed) {
+              ldm.firstpoint = true;
+            }
+             */
+          }
+          if (mouseButton === RIGHT) {
+            ldm.setCoord(0, x, y);
+            ldm.firstpoint = false;
           }
           break;
         case 'Fill':
@@ -111,7 +134,7 @@ function mouseReleased() {
 
 function draw() {
   [x, y] = C2Pix(mouseX, mouseY);
-  console.log(x, y);
+  //console.log(x, y);
 
   // Funny dot-area in center
   /*stroke('purple');
