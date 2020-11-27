@@ -11,7 +11,7 @@ document.addEventListener("keydown", event => {
   // do something
 });
 document.addEventListener("color-block", event => {
-  console.log(event);
+  //console.log(event);
   STATE.colorBlocked = event.detail.value;
 });
 
@@ -135,20 +135,6 @@ function mouseReleased() {
 function draw() {
   [x, y] = C2Pix(mouseX, mouseY);
   //console.log(x, y);
-
-  // Funny dot-area in center
-  /*stroke('purple');
-  strokeWeight(4);
-  let i = 0, j = 0;
-  while (i < 30) {
-    j = 0;
-    while (j < 30) {
-      let cr = Pix2C([i - 15, j - 15]);
-      point(cr[0], cr[1]);
-      j++;
-    }
-    i++;
-  }*/
 
   switch (STATE.activeRegion) {
     case 'activeArea':

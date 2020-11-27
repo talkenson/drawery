@@ -4,6 +4,7 @@ const CrudStore = {
   Rectangles: 'store-rects',
   Polygons: 'store-polygons',
   Temporaries: 'store-temporaries',
+  Mask: 'store-mask',
   State: 'store-state-saver',
 };
 
@@ -54,7 +55,7 @@ class Crud {
     this.storeName = this.prefix + store;
     console.log('Crud::Build :', this.storeName);
     if (!EventManager.findListeners(this.storeName).length) {
-      console.log('There\'s no Initialization found. Initializing manually...');
+      //console.log('There\'s no Initialization found. Initializing manually...');
       this.init();
     }
   }

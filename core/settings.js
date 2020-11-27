@@ -172,6 +172,9 @@ let _SETTINGS = {
         model: null,
       },
     },
+    system: {
+      logEnabled: true,
+    },
     initialState: {
       activeTool: 'Line',
       activeRegion: null,
@@ -208,4 +211,10 @@ class SettingsManager {
 const _SettingsManager = new SettingsManager();
 
 _SETTINGS.setup.initialState.currentColor = _SETTINGS.general.color.palette[_SETTINGS.general.color.current];
+
+if (!_SETTINGS.setup.system.logEnabled) {
+  console.log = (a) => {
+    return;
+  }
+}
 

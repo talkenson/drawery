@@ -10,12 +10,13 @@
 */
 
 let STATE = _SETTINGS.setup.initialState;
-const { pixelCrud, lineCrud, rectCrud, polyCrud, stateCrud } = {
+const { pixelCrud, lineCrud, rectCrud, polyCrud, stateCrud, maskCrud } = {
   pixelCrud: new Crud(CrudStore.Pixels),
   lineCrud: new Crud(CrudStore.Lines),
   rectCrud: new Crud(CrudStore.Rectangles),
   polyCrud: new Crud(CrudStore.Polygons),
   stateCrud: new Crud(CrudStore.State),
+  maskCrud: new Crud(CrudStore.Mask),
 };
 // Usage sample of new CRUD implementation
 /*
@@ -164,7 +165,7 @@ const testForMask = ([x, y]) => {
     _SETTINGS.general.activeArea.cellBorders.top, x, y)) {
     mask[3] = true
   }
-  console.log(['top', 'right', 'bottom', 'left'].map((v, i) => mask[i] ? v : ''));
+  //console.log(['top', 'right', 'bottom', 'left'].map((v, i) => mask[i] ? v : ''));
   return mask;
 };
 
@@ -195,8 +196,8 @@ const drawGrid = (drawBack = null) => {
 _SETTINGS.setup.modules.grid.render = drawGrid;
 // Initializing
 
-const putPixel = ([cox, coy], color = STATE.currentColor) => {
-    if (STATE.maskOptions.isActive && !testForMask([cox, coy]).includes(true) || !STATE.maskOptions.isActive) {
+const putPixel = ([cox, coy], color = STATE.currentColor, ignoreMask = false) => {
+    if (ignoreMask || STATE.maskOptions.isActive && !testForMask([cox, coy]).includes(true) || !STATE.maskOptions.isActive) {
       fill(color);
     } else {
       fill(COLORS.WHAY);
@@ -316,29 +317,30 @@ const ToolsRenderer = {
 };
 
 const ToolActions = {
-  'Pixel': (type) => {STATE.activeTool = 'Pixel'},
-  'Line': (type) => {STATE.activeTool = 'Line'},
-  'Rectangle': (type) => {STATE.activeTool = 'Rectangle'},
-  'Polygon': (type) => {STATE.activeTool = 'Polygon'},
-  'Fill': (type) => {STATE.activeTool = 'Fill'},
-  'Colorizer': (type) => {changeColor(type)},
-  'Clear': (type) => {
+  'Pixel': (type) => ToolManager.changeTool('Pixel'),
+  'Line': (type) => ToolManager.changeTool('Line'),
+  'Rectangle': (type) => ToolManager.changeTool('Rectangle'),
+  'Polygon': (type) => ToolManager.changeTool('Polygon'),
+  'Fill': (type) => ToolManager.changeTool('Fill'),
+  'Colorizer': (type) => ToolManager.useCallback(() => changeColor(type)),
+  'Clear': (type) => ToolManager.useCallback( () => {
     Object.keys(_SETTINGS.setup.modules).forEach(key => {
       _SETTINGS.setup.modules[key].model ?
         _SETTINGS.setup.modules[key].model.render()
         : (_SETTINGS.setup.modules[key].render ? _SETTINGS.setup.modules[key].render() : console.log(`${key} isn\'t inited before clearing`))
     });
     document.dispatchEvent(new Event('clearEvent'));
-  },
-  'Export': (type) => {
-    saveCanvas(createCanvasName(), 'jpg')
-  },
+  }),
+  'Export': (type) => ToolManager.useCallback(
+    () => saveCanvas(createCanvasName(), 'jpg')
+  ),
   'Delimiter': (type) => {},
-  'Masking': (type) => {STATE.activeTool = 'Masking'},
-  'MaskActivate': (type) => {
-    STATE.maskOptions.isActive = !STATE.maskOptions.isActive;
-  }
+  'Masking': (type) => ToolManager.changeTool('Masking'),
+  'MaskActivate': (type) => ToolManager.useCallback(
+    () => STATE.maskOptions.isActive = !STATE.maskOptions.isActive
+  ),
 };
+
 
 class Toolbar {
   constructor() {
