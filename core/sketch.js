@@ -10,16 +10,20 @@ document.addEventListener("keydown", event => {
   handleHotkey(event.key);
   // do something
 });
+document.addEventListener("color-block", event => {
+  //console.log(event);
+  STATE.colorBlocked = event.detail.value;
+});
 
-const ldm = new LDM();
+
+const ldm = new LDM(PolyMan);
 const tbar = new Toolbar();
 let [x, y] = [0, 0];
 
 function setup() {
   createCanvas(CANVAS_W, CANVAS_H);
   frameRate(FRAME_RATE);
-  //console.log("Setup completed");
-  //console.log(CANVAS_HC, CANVAS_WC);
+  countSizes();
 
   STATE.activeTool = Tools.Line;
   STATE.currentColor = COLORS.RED;
@@ -38,6 +42,14 @@ function setup() {
       STATE.activeTool = Tools.Fill;
       tbar.render();
     },
+    'r': () => {
+      STATE.activeTool = Tools.Rectangle;
+      tbar.render();
+    },
+    'm': () => {
+      STATE.activeTool = Tools.Masking;
+      tbar.render();
+    },
     'c': () => {
       ToolActions[Tools.Colorizer](LEFT);
       tbar.render();
@@ -53,6 +65,10 @@ function setup() {
   draw();
   tbar.render();
   setInterval(utilsFixedUpdate, 50);
+
+  // Debug: painting area size in cells
+  // console.log(_SETTINGS.general.activeArea.cellBorders);
+
   noLoop();
 }
 
@@ -65,12 +81,33 @@ function mouseReleased() {
     case 'activeArea':
       switch (STATE.activeTool) {
         case 'Line':
+        case 'Rectangle':
+        case 'Masking':
           if (mouseButton === LEFT) {
             ldm.setCoord(0, x, y);
           }
           if (mouseButton === RIGHT) {
             ldm.setCoord(1, x, y);
             ldm.draw();
+          }
+          break;
+        case 'Polygon':
+          if (mouseButton === LEFT) {
+            ldm.setCoord(ldm.firstpoint ? 0 : 1, x, y);
+            if (!ldm.firstpoint) {
+              ldm.draw().then(() => ldm.setCoord(0, x, y));
+            } else {
+              ldm.firstpoint = false;
+            }
+            /*
+            if (figure_closed) {
+              ldm.firstpoint = true;
+            }
+             */
+          }
+          if (mouseButton === RIGHT) {
+            ldm.setCoord(0, x, y);
+            ldm.firstpoint = false;
           }
           break;
         case 'Fill':
@@ -97,6 +134,7 @@ function mouseReleased() {
 
 function draw() {
   [x, y] = C2Pix(mouseX, mouseY);
+  //console.log(x, y);
 
   switch (STATE.activeRegion) {
     case 'activeArea':
